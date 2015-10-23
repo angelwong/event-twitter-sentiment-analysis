@@ -242,6 +242,54 @@ def get_text_sentiment(apikey, tweet, target, output):
 
     return
 
+def get_keyword_sentiment(apikey, tweet, target, output):
+
+    # Base AlchemyAPI URL for targeted sentiment call
+    alchemy_url = "http://gateway-a.watsonplatform.net/calls/text/TextGetRankedKeywords"
+    
+    # Parameter list, containing the data to be enriched
+    parameters = {
+        "apikey" : apikey,
+        "text"   : tweet['text'],
+        "sentiment": 1,
+        "outputMode" : "json",
+        "showSourceText" : 1
+        }
+
+    try:
+
+        results = requests.get(url=alchemy_url, params=urllib.urlencode(parameters))
+        response = results.json()
+
+    except Exception as e:
+        print "Error while calling TextGetTargetedSentiment on Tweet (ID %s)" % tweet['id']
+        print "Error:", e
+        return
+
+    try:
+        if 'OK' != response['status'] or 'docSentiment' not in response:
+            print "Problem finding 'docSentiment' in HTTP response from AlchemyAPI"
+            print response
+            print "HTTP Status:", results.status_code, results.reason
+            print "--"
+            return
+
+        for word in response['keywords']:
+            print word        
+        #tweet['keyword'] = response['docSentiment']['type']
+        #tweet['score'] = 0.
+        #if tweet['sentiment'] in ('positive', 'negative'):
+        #    tweet['score'] = float(response['docSentiment']['score'])
+        #output.put(tweet)
+
+    except Exception as e:
+        print "D'oh! There was an error enriching Tweet (ID %s)" % tweet['id']
+        print "Error:", e
+        print "Request:", results.url
+        print "Response:", response
+
+    return
+
 def dedup(tweets):
     used_ids = []
     collection = []
@@ -286,6 +334,8 @@ def print_results():
     num_negative_tweets = tweets.find({"sentiment" : "negative"}).count()
     num_neutral_tweets = tweets.find({"sentiment" : "neutral"}).count()
     num_tweets = tweets.find().count()
+
+    print num_tweets
 
     if num_tweets != sum((num_positive_tweets, num_negative_tweets, num_neutral_tweets)):
         print "Counting problem!"
